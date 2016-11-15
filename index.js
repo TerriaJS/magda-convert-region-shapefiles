@@ -4,31 +4,46 @@ const execFileSync = require('child_process').execFileSync;
 const JSONStream = require('JSONStream');
 const es = require('event-stream');
 
-if (process.argv.length < 3) {
-	console.log('Please specify the path to the shapefiles.  The output GeoJSON files will be written to the current working directory.');
+if (process.argv.length < 4) {
+	console.log('<regionMapping.json path> <directory containing shapefiles> [GeoJSON output directory]');
 	process.exit(1);
 }
 
-const files = fs.readdirSync(process.argv[2] || '.');
-files.forEach(function(inputPath) {
-	inputPath = path.join(process.argv[2], inputPath);
-	const extension = path.extname(inputPath);
-	if (!extension.match(/^.shp$/i)) {
-		return;
+const regionMappingJsonPath = process.argv[2];
+const shapefileDir = process.argv[3];
+const outputDir = process.argv[4] || '.';
+
+let conf = 'regionSources {\n';
+
+const regionMapping = JSON.parse(fs.readFileSync(regionMappingJsonPath, 'UTF-8'));
+Object.keys(regionMapping.regionWmsMap).forEach(function(regionID) {
+	const region = regionMapping.regionWmsMap[regionID];
+
+	console.log('Processing ' + regionID);
+
+	try {
+		const inputPath = path.join(shapefileDir, region.layerName + '.shp');
+		const intermediatePath = path.join(outputDir, regionID + '.work.geojson');
+		const outputPath = path.join(outputDir, regionID + '.geojson');
+		execFileSync("ogr2ogr", ['-f', 'GeoJSON', intermediatePath, inputPath]);
+
+		fs.createReadStream(intermediatePath)
+			.pipe(JSONStream.parse('features.*'))
+			.pipe(JSONStream.stringify())
+			.pipe(fs.createWriteStream(outputPath));
+
+		fs.unlinkSync(intermediatePath);
+
+		conf += '  ' + regionID + ' {\n';
+		conf += '    url = "https://s3-ap-southeast-2.amazonaws.com/magda-files/' + regionID + '.json"\n';
+		conf += '    idField = "' + region.regionProp + '"\n';
+		conf += '    shapePath = "geometry"\n';
+		conf += '  }\n';
+	} catch(e) {
+		console.error('Exception while processing ' + regionID + ':\n  ' + e.message);
 	}
-
-	console.log(inputPath);
-
-	const withoutExtension = path.basename(inputPath, extension);
-	const intermediateName = withoutExtension + '.work.geojson';
-	const outputName = withoutExtension + '.geojson';
-
-	execFileSync("ogr2ogr", ['-f', 'GeoJSON', intermediateName, inputPath]);
-
-	fs.createReadStream(intermediateName)
-		.pipe(JSONStream.parse('features.*'))
-		.pipe(JSONStream.stringify())
-		.pipe(fs.createWriteStream(outputName));
-
-	fs.unlinkSync(intermediateName);
 });
+
+conf += '}\n';
+
+console.log(conf);
