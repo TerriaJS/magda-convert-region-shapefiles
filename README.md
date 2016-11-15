@@ -18,7 +18,7 @@ The optional last parameter specifies the directory in which to create the outpu
 Once done, copy the `geojson` files to S3 using (you'll need a terria AWS profile with access to the terria AWS account):
 
 ```
-aws --profile terria s3 cp ./out/* S3://magda-files
+aws --profile terria s3 cp ./out/ s3://magda-files --recursive
 ```
 
 And update the magda-metadata application.conf file with the `regionSources` written to the console.
