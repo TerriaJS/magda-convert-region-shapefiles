@@ -18,7 +18,7 @@ const outputDir = process.argv[4] || '.';
 let conf = 'regionSources {\n';
 
 const regionMapping = JSON.parse(fs.readFileSync(regionMappingJsonPath, 'UTF-8'));
-const regionIDs = Object.keys(regionMapping.regionWmsMap).slice(10,12);
+const regionIDs = Object.keys(regionMapping.regionWmsMap);
 
 let next = 0;
 
