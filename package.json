@@ -1,0 +1,23 @@
+{
+  "name": "magda-convert-region-shapefiles",
+  "version": "1.0.0",
+  "description": "Creates GeoJSON files for magda-metadata from a directory of region shapefiles.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TerriaJS/magda-convert-region-shapefiles.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/TerriaJS/magda-convert-region-shapefiles/issues"
+  },
+  "homepage": "https://github.com/TerriaJS/magda-convert-region-shapefiles#readme",
+  "dependencies": {
+    "JSONStream": "^1.2.1",
+    "event-stream": "^3.3.4"
+  }
+}
