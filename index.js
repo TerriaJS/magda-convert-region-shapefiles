@@ -18,7 +18,17 @@ const outputDir = process.argv[4] || '.';
 let conf = 'regionSources {\n';
 
 const regionMapping = JSON.parse(fs.readFileSync(regionMappingJsonPath, 'UTF-8'));
-Object.keys(regionMapping.regionWmsMap).forEach(function(regionID) {
+const regionIDs = Object.keys(regionMapping.regionWmsMap).slice(10,12);
+
+let next = 0;
+
+function doNext() {
+	const regionID = regionIDs[next++];
+	if (!regionID) {
+		conf += '}\n';
+		console.log(conf);
+		return;
+	}
 	const region = regionMapping.regionWmsMap[regionID];
 
 	console.log('Processing ' + regionID);
@@ -29,23 +39,25 @@ Object.keys(regionMapping.regionWmsMap).forEach(function(regionID) {
 		const outputPath = path.join(outputDir, regionID + '.geojson');
 		execFileSync("ogr2ogr", ['-f', 'GeoJSON', intermediatePath, inputPath]);
 
-		fs.createReadStream(intermediatePath)
+		const stream = fs.createReadStream(intermediatePath)
 			.pipe(JSONStream.parse('features.*'))
 			.pipe(JSONStream.stringify())
 			.pipe(fs.createWriteStream(outputPath));
 
-		fs.unlinkSync(intermediatePath);
+		stream.on('finish', function() {
+			fs.unlinkSync(intermediatePath);
 
-		conf += '  ' + regionID + ' {\n';
-		conf += '    url = "https://s3-ap-southeast-2.amazonaws.com/magda-files/' + regionID + '.json"\n';
-		conf += '    idField = "' + region.regionProp + '"\n';
-		conf += '    shapePath = "geometry"\n';
-		conf += '  }\n';
+			conf += '  ' + regionID + ' {\n';
+			conf += '    url = "https://s3-ap-southeast-2.amazonaws.com/magda-files/' + regionID + '.json"\n';
+			conf += '    idField = "' + region.regionProp + '"\n';
+			conf += '    shapePath = "geometry"\n';
+			conf += '  }\n';
+
+			doNext();
+		});
 	} catch(e) {
 		console.error('Exception while processing ' + regionID + ':\n  ' + e.message);
 	}
-});
+}
 
-conf += '}\n';
-
-console.log(conf);
+doNext();
